@@ -135,7 +135,7 @@ Once we have the GUID of the Adventure Lab we are interested in, we can load the
     Connection: Keep-Alive
     Accept-Encoding: gzip
 
-The response to this is mostly self-explanatory but it does vary slightly if you are logged in. If logged in, you get information on which stage you have already completed and a bit of data named `FindCodeHashBase16` which is required to check answers to the question.
+The response to this is mostly self-explanatory but it does vary slightly if you are logged in. If logged in, you get information on which stage you have already completed and a bit of data named `FindCodeHashBase16` or `FindCodeHashBase16v2` which is required to check answers to the question.
 
 ### Past logs
 
@@ -153,7 +153,7 @@ This request is used to get a list of logs that past finders have written for th
 
 When the user enters the answer to a stage it is first checked locally (by comparing hashes) and if it is correct, it is then sent to the server. The server also checks that submitted answers are correct.
 
-### Local (hash) check
+### Local (hash) check with `FindCodeHashBase16`
 
 The `FindCodeHashBase16` value returned in the cache details is a MD5 hash of the user's public GUID (from the Get user account details request) and the answer concatenated together. Spaces are removed and all uppercase letters are converted to lowercase. The algorithm is shown below.
 
@@ -166,6 +166,23 @@ The `FindCodeHashBase16` value returned in the cache details is a MD5 hash of th
     }
 
 If the hash does not match, the app then replaces any occurrences of `"1920"` in the answer with a single apostrophe `"'"` and checks the hash again. If this also fails, the reverse is tried, any apostrophes are replaced with the string `"1920"` and the hash calculated and checked again. If this fails as well, then the answer is deemed to be incorrect.
+
+### Local (hash) check with `FindCodeHashBase16v2`
+
+The `FindCodeHashBase16v2` value returned in the cache details is a MD5 hash of the user's public GUID (from the Get user account details request) and the answer concatenated together. Spaces are removed and all uppercase letters are converted to lowercase. Some special typographic characters also get replaced by their simpler counterparts. The algorithm is shown below.
+
+    answer_nospace = answer.replace(" ", "");  // Remove spaces
+    answer_oldstyle_characters = answer_nospace.replace('“|‟', '"'");  // Replace typographic double quotes with old-style quoation marks
+    answer_oldstyle_characters = answer_oldstyle_characters.replace("‘|’", "'");  // Replace typographic single quotes with old-style quoation marks
+    answer_oldstyle_characters = answer_oldstyle_characters.replace("‘–|—", "-");  // Replace en and em dashes with old style dashes
+    hash_input = publicGuid + answer_oldstyle_characters;  // Concatenate strings
+    hash_input = hash_input.toLowerCase();     // Convert to all lowercase
+    hash_result = md5(hash_input);             // md5 hash is used
+    if (hash_result == FindCodeHashBase16) {
+        // Answer is correct
+    }
+
+If the hash does not match, then the answer is deemed to be incorrect.
 
 ### Server check
 
